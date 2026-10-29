@@ -101,5 +101,20 @@ while running:
  
     pygame.display.flip()
     clock.tick(60)
- 
+ def check_collision():
+    for bottom_pipe, top_pipe, scored in pipes:
+        if (
+            bird_y + bird_radius >= screen_height
+            or bird_y - bird_radius <= 0
+            or pygame.Rect(
+                bird_x - bird_radius, bird_y - bird_radius,
+                bird_radius * 2, bird_radius * 2
+            ).colliderect(bottom_pipe)
+            or pygame.Rect(
+                bird_x - bird_radius, bird_y - bird_radius,
+                bird_radius * 2, bird_radius * 2
+            ).colliderect(top_pipe)
+        ):
+            return True
+    return False
 pygame.quit()
