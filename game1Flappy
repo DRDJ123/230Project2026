@@ -19,7 +19,7 @@ gravity = 0.55
 # Pipe properties
 pipe_width = 80
 pipe_gap = 250
-pipe_velocity = 2
+pipe_velocity = 3.5
 pipes = []
 
 # Score properties
