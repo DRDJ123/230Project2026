@@ -5,7 +5,7 @@ import random
 pygame.init()
  
 # Set up the display
-screen_width, screen_height = 400, 600
+screen_width, screen_height = 1000, 1000
 screen = pygame.display.set_mode((screen_width, screen_height))
 pygame.display.set_caption("Flappy Bird Clone")
  
@@ -14,12 +14,13 @@ bird_x = 50
 bird_y = screen_height // 2
 bird_radius = 20
 bird_velocity = 0
-gravity = 0.5
+gravity = 0.55
  
 # Pipe properties
 pipe_width = 80
-pipe_gap = 150
-pipe_velocity = 3
+pipe_gap = 250
+pipe_velocity = 2
+  
 pipes = []
  
  
@@ -91,7 +92,7 @@ while running:
  
     update_pipes()
  
-    screen.fill((0, 0, 0))
+    screen.fill((100, 100, 140))
     draw_bird()
     draw_pipes()
  
