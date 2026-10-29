@@ -1,34 +1,38 @@
 import pygame
 import random
- 
+
 # Initialize Pygame
 pygame.init()
- 
+
 # Set up the display
 screen_width, screen_height = 1000, 1000
 screen = pygame.display.set_mode((screen_width, screen_height))
 pygame.display.set_caption("Flappy Bird Clone")
- 
+
 # Bird properties
 bird_x = 50
 bird_y = screen_height // 2
 bird_radius = 20
 bird_velocity = 0
 gravity = 0.55
- 
+
 # Pipe properties
 pipe_width = 80
 pipe_gap = 250
 pipe_velocity = 2
-  
 pipes = []
- 
- 
+
+# Score properties
+score = 0
+font = pygame.font.SysFont(None, 60)
+
+
 def create_pipe():
     gap_y = random.randint(150, 400)
 
     top_pipe = pygame.Rect(
-        screen_width, 0, pipe_width, gap_y - pipe_gap // 2
+        screen_width, 0, pipe_width,
+        gap_y - pipe_gap // 2
     )
 
     bottom_pipe = pygame.Rect(
@@ -36,85 +40,103 @@ def create_pipe():
         pipe_width, screen_height - (gap_y + pipe_gap // 2)
     )
 
-    return bottom_pipe, top_pipe
- 
- 
+    return bottom_pipe, top_pipe, False
+
+
 def draw_bird():
-    pygame.draw.circle(screen, (255, 0, 0), (int(bird_x), int(bird_y)), bird_radius)
- 
- 
+    pygame.draw.circle(
+        screen, (255, 0, 0),
+        (int(bird_x), int(bird_y)), bird_radius
+    )
+
+
 def draw_pipes():
-    for bottom_pipe, top_pipe in pipes:
+    for bottom_pipe, top_pipe, scored in pipes:
         pygame.draw.rect(screen, (0, 255, 0), bottom_pipe)
         pygame.draw.rect(screen, (0, 255, 0), top_pipe)
- 
- 
+
+
 def update_pipes():
-    for i, (bottom_pipe, top_pipe) in enumerate(pipes):
+    for bottom_pipe, top_pipe, scored in pipes:
         bottom_pipe.x -= pipe_velocity
         top_pipe.x -= pipe_velocity
-        if bottom_pipe.x < -pipe_width:
-            pipes.pop(i)
- 
- 
+
+    pipes[:] = [
+        pipe for pipe in pipes
+        if pipe[0].x >= -pipe_width
+    ]
+
+
+def update_score():
+    global score
+
+    for i, (bottom_pipe, top_pipe, scored) in enumerate(pipes):
+        if not scored and bottom_pipe.right < bird_x:
+            score += 1
+            pipes[i] = (bottom_pipe, top_pipe, True)
+
+
+def draw_score():
+    score_text = font.render(
+        f"Score: {score}", True, (255, 255, 255)
+    )
+    screen.blit(score_text, (20, 20))
+
+
 def check_collision():
-    for bottom_pipe, top_pipe in pipes:
+    bird_rect = pygame.Rect(
+        bird_x - bird_radius,
+        bird_y - bird_radius,
+        bird_radius * 2,
+        bird_radius * 2
+    )
+
+    if (
+        bird_y + bird_radius >= screen_height
+        or bird_y - bird_radius <= 0
+    ):
+        return True
+
+    for bottom_pipe, top_pipe, scored in pipes:
         if (
-            bird_y + bird_radius >= screen_height
-            or bird_y - bird_radius <= 0
-            or pygame.Rect(bird_x - bird_radius, bird_y - bird_radius, bird_radius * 2, bird_radius * 2).colliderect(
-                bottom_pipe
-            )
-            or pygame.Rect(bird_x - bird_radius, bird_y - bird_radius, bird_radius * 2, bird_radius * 2).colliderect(
-                top_pipe
-            )
+            bird_rect.colliderect(bottom_pipe)
+            or bird_rect.colliderect(top_pipe)
         ):
             return True
+
     return False
- 
- 
+
+
 clock = pygame.time.Clock()
- 
 running = True
+
 while running:
     for event in pygame.event.get():
         if event.type == pygame.QUIT:
             running = False
+
         elif event.type == pygame.KEYDOWN:
             if event.key == pygame.K_SPACE:
                 bird_velocity = -8
- 
+
     bird_velocity += gravity
     bird_y += bird_velocity
- 
-    if len(pipes) == 0 or pipes[-1][0].x < screen_width - 200:
+
+    if len(pipes) == 0 or pipes[-1][0].x < screen_width - 400:
         pipes.append(create_pipe())
- 
+
     update_pipes()
- 
+    update_score()
+
     screen.fill((100, 100, 140))
     draw_bird()
     draw_pipes()
- 
+    draw_score()
+
     if check_collision():
         running = False
- 
+
     pygame.display.flip()
     clock.tick(60)
- def check_collision():
-    for bottom_pipe, top_pipe, scored in pipes:
-        if (
-            bird_y + bird_radius >= screen_height
-            or bird_y - bird_radius <= 0
-            or pygame.Rect(
-                bird_x - bird_radius, bird_y - bird_radius,
-                bird_radius * 2, bird_radius * 2
-            ).colliderect(bottom_pipe)
-            or pygame.Rect(
-                bird_x - bird_radius, bird_y - bird_radius,
-                bird_radius * 2, bird_radius * 2
-            ).colliderect(top_pipe)
-        ):
-            return True
-    return False
+
 pygame.quit()
