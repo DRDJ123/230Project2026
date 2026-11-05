@@ -308,15 +308,15 @@ def main():
                     running = False
 
                 if event.key == pygame.K_r:
-   		 board = create_board()
-  		 current_piece = Piece()
- 		 next_piece = Piece()
-    		score = 0
-    		lines = 0
-   		 level = 1
-   		 fall_time = 0
-   		 game_over = False
-  		  paused = False
+               		board = create_board()
+              		current_piece = Piece()
+             		next_piece = Piece()
+                	score = 0
+                	lines = 0
+               		level = 1
+               		fall_time = 0
+               		game_over = False
+              		paused = False
 
 
                 if event.key == pygame.K_p and not game_over:
