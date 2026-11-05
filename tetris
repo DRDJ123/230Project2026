@@ -3,454 +3,284 @@ import pygame
 import random
 import sys
 
+# Initialize pygame
 pygame.init()
 
-# -----------------------------
-# GAME SETTINGS
-# -----------------------------
-CELL_SIZE = 30
-COLS = 10
-ROWS = 20
-
-BOARD_WIDTH = COLS * CELL_SIZE
-BOARD_HEIGHT = ROWS * CELL_SIZE
-
-SIDE_WIDTH = 180
-SCREEN_WIDTH = BOARD_WIDTH + SIDE_WIDTH
-SCREEN_HEIGHT = BOARD_HEIGHT
-
-screen = pygame.display.set_mode((SCREEN_WIDTH, SCREEN_HEIGHT))
-pygame.display.set_caption("Colorful Tetris")
+# Screen settings
+WIDTH = 800
+HEIGHT = 400
+screen = pygame.display.set_mode((WIDTH, HEIGHT))
+pygame.display.set_caption("Purple Guy Run - FNAF")
 
 clock = pygame.time.Clock()
+font = pygame.font.SysFont("Arial", 28, bold=True)
+big_font = pygame.font.SysFont("Arial", 55, bold=True)
+
+# Colors
+WHITE = (255, 255, 255)
+BLACK = (30, 30, 30)
+GREEN = (40, 160, 60)
+GRAY = (120, 120, 120)
+ORANGE = (220, 130, 40)
+
+# Ground
+GROUND_Y = 320
+
+# Purple Guy
+dino = pygame.Rect(80, GROUND_Y - 55, 45, 55)
+velocity_y = 0
+gravity = 0.8
+jump_power = -15
+on_ground = True
+
+# Obstacles
+obstacles = []
+spawn_timer = 0
+spawn_delay = 90
+game_speed = 6
+
+# Score
+score = 0
+high_score = 0
+game_over = False
+
+
+# Draw Purple Guy
+def draw_dino():
+    purple = (105, 35, 160)
+    dark_purple = (65, 15, 100)
+    skin = (125, 55, 175)
+    white = (255, 255, 255)
+    black = (15, 10, 20)
+
+    x = dino.x
+    y = dino.y
+
+    # Legs
+    pygame.draw.rect(screen, dark_purple,
+                     (x + 7, y + 43, 11, 17))
+    pygame.draw.rect(screen, dark_purple,
+                     (x + 27, y + 43, 11, 17))
+
+    # Shoes
+    pygame.draw.rect(screen, black,
+                     (x + 3, y + 56, 17, 5))
+    pygame.draw.rect(screen, black,
+                     (x + 24, y + 56, 17, 5))
+
+    # Body / purple suit
+    pygame.draw.rect(screen, purple,
+                     (x + 5, y + 15, 36, 32))
+
+    # White shirt
+    pygame.draw.polygon(screen, white, [
+        (x + 19, y + 16),
+        (x + 29, y + 16),
+        (x + 24, y + 31)
+    ])
+
+    # Black tie
+    pygame.draw.polygon(screen, black, [
+        (x + 21, y + 17),
+        (x + 27, y + 17),
+        (x + 25, y + 36),
+        (x + 23, y + 36)
+    ])
+
+    # Arms
+    pygame.draw.rect(screen, dark_purple,
+                     (x - 1, y + 19, 8, 25))
+    pygame.draw.rect(screen, dark_purple,
+                     (x + 38, y + 19, 8, 25))
+
+    # Head
+    pygame.draw.ellipse(screen, skin,
+                        (x + 8, y - 12, 31, 31))
+
+    # Face shadow
+    pygame.draw.ellipse(screen, dark_purple,
+                        (x + 11, y - 8, 25, 22))
+
+    # Eyes
+    pygame.draw.circle(screen, white,
+                       (x + 18, y + 1), 3)
+    pygame.draw.circle(screen, white,
+                       (x + 30, y + 1), 3)
+
+    # Pupils
+    pygame.draw.circle(screen, black,
+                       (x + 18, y + 1), 1)
+    pygame.draw.circle(screen, black,
+                       (x + 30, y + 1), 1)
+
+    # Creepy smile
+    pygame.draw.arc(screen, black,
+                    (x + 16, y + 5, 18, 10),
+                    3.14, 6.28, 2)
 
-# -----------------------------
-# COLORS
-# -----------------------------
-BLACK = (15, 15, 25)
-DARK_GRAY = (35, 35, 50)
-WHITE = (245, 245, 245)
-GRAY = (80, 80, 95)
+    # Top hat
+    pygame.draw.rect(screen, black,
+                     (x + 15, y - 24, 19, 14))
+    pygame.draw.rect(screen, dark_purple,
+                     (x + 11, y - 12, 27, 4))
 
-CYAN = (0, 230, 230)
-BLUE = (60, 100, 255)
-ORANGE = (255, 155, 40)
-YELLOW = (255, 225, 30)
-GREEN = (60, 220, 90)
-PURPLE = (175, 75, 230)
-RED = (245, 65, 75)
+    # Purple hat band
+    pygame.draw.rect(screen, purple,
+                     (x + 16, y - 15, 17, 3))
 
-COLORS = [
-    CYAN, BLUE, ORANGE, YELLOW,
-    GREEN, PURPLE, RED
-]
 
-# -----------------------------
-# TETRIS PIECES
-# -----------------------------
-SHAPES = [
-    [[1, 1, 1, 1]],
+# Draw obstacle
+def draw_obstacle(obstacle):
+    pygame.draw.rect(screen, ORANGE, obstacle)
 
-    [[1, 0, 0],
-     [1, 1, 1]],
+    pygame.draw.rect(screen, ORANGE,
+                     (obstacle.x - 8, obstacle.y + 15, 8, 10))
 
-    [[0, 0, 1],
-     [1, 1, 1]],
+    pygame.draw.rect(screen, ORANGE,
+                     (obstacle.x + obstacle.width,
+                      obstacle.y + 8, 8, 10))
 
-    [[1, 1],
-     [1, 1]],
 
-    [[0, 1, 1],
-     [1, 1, 0]],
-
-    [[0, 1, 0],
-     [1, 1, 1]],
-
-    [[1, 1, 0],
-     [0, 1, 1]]
-]
-
-
-class Piece:
-    def __init__(self):
-        index = random.randrange(len(SHAPES))
-        self.shape = [row[:] for row in SHAPES[index]]
-        self.color = COLORS[index]
-        self.x = COLS // 2 - len(self.shape[0]) // 2
-        self.y = 0
-
-    def rotate(self):
-        self.shape = [
-            list(row) for row in zip(*self.shape[::-1])
-        ]
-
-
-# -----------------------------
-# GAME FUNCTIONS
-# -----------------------------
-def create_board():
-    return [[None for _ in range(COLS)] for _ in range(ROWS)]
-
-
-def valid_position(board, piece):
-    for row_index, row in enumerate(piece.shape):
-        for col_index, cell in enumerate(row):
-
-            if cell:
-                x = piece.x + col_index
-                y = piece.y + row_index
-
-                if x < 0 or x >= COLS or y >= ROWS:
-                    return False
-
-                if y >= 0 and board[y][x] is not None:
-                    return False
-
-    return True
-
-
-def lock_piece(board, piece):
-    for row_index, row in enumerate(piece.shape):
-        for col_index, cell in enumerate(row):
-
-            if cell:
-                x = piece.x + col_index
-                y = piece.y + row_index
-
-                if y < 0:
-                    return False
-
-                board[y][x] = piece.color
-
-    return True
-
-
-def clear_lines(board):
-    remaining_rows = [
-        row for row in board if any(cell is None for cell in row)
-    ]
-
-    cleared = ROWS - len(remaining_rows)
-
-    for _ in range(cleared):
-        remaining_rows.insert(0, [None for _ in range(COLS)])
-
-    board[:] = remaining_rows
-    return cleared
-
-
-def draw_block(surface, x, y, color):
-    rect = pygame.Rect(
-        x * CELL_SIZE,
-        y * CELL_SIZE,
-        CELL_SIZE,
-        CELL_SIZE
-    )
-
-    pygame.draw.rect(surface, color, rect.inflate(-2, -2), border_radius=5)
-
-    # Light highlight
-    pygame.draw.line(
-        surface, WHITE,
-        (rect.x + 5, rect.y + 5),
-        (rect.right - 5, rect.y + 5), 2
-    )
-
-    pygame.draw.line(
-        surface, WHITE,
-        (rect.x + 5, rect.y + 5),
-        (rect.x + 5, rect.bottom - 5), 2
-    )
-
-
-def draw_board(board):
-    screen.fill(BLACK)
-
-    for y in range(ROWS):
-        for x in range(COLS):
-
-            rect = pygame.Rect(
-                x * CELL_SIZE,
-                y * CELL_SIZE,
-                CELL_SIZE,
-                CELL_SIZE
-            )
-
-            pygame.draw.rect(
-                screen, DARK_GRAY,
-                rect, 1
-            )
-
-            if board[y][x] is not None:
-                draw_block(screen, x, y, board[y][x])
-
-
-def draw_piece(piece):
-    for row_index, row in enumerate(piece.shape):
-        for col_index, cell in enumerate(row):
-
-            if cell:
-                x = piece.x + col_index
-                y = piece.y + row_index
-
-                if y >= 0:
-                    draw_block(screen, x, y, piece.color)
-
-
-def draw_next_piece(piece):
-    start_x = BOARD_WIDTH + 50
-    start_y = 190
-
-    for row_index, row in enumerate(piece.shape):
-        for col_index, cell in enumerate(row):
-
-            if cell:
-                rect = pygame.Rect(
-                    start_x + col_index * 25,
-                    start_y + row_index * 25,
-                    25,
-                    25
-                )
-
-                pygame.draw.rect(
-                    screen,
-                    piece.color,
-                    rect.inflate(-2, -2),
-                    border_radius=4
-                )
-
-
-def draw_text(text, size, color, x, y):
-    font = pygame.font.SysFont("Arial", size, bold=True)
-    rendered = font.render(str(text), True, color)
-    screen.blit(rendered, (x, y))
-
-
-def draw_sidebar(score, lines, level, next_piece):
-    pygame.draw.rect(
-        screen,
-        DARK_GRAY,
-        (BOARD_WIDTH, 0, SIDE_WIDTH, SCREEN_HEIGHT)
-    )
-
-    draw_text("TETRIS", 30, CYAN, BOARD_WIDTH + 25, 25)
-
-    draw_text("SCORE", 18, WHITE, BOARD_WIDTH + 25, 90)
-    draw_text(score, 25, YELLOW, BOARD_WIDTH + 25, 115)
-
-    draw_text("LINES", 18, WHITE, BOARD_WIDTH + 25, 145)
-    draw_text(lines, 25, GREEN, BOARD_WIDTH + 25, 170)
-
-    draw_text("LEVEL", 18, WHITE, BOARD_WIDTH + 25, 255)
-    draw_text(level, 25, ORANGE, BOARD_WIDTH + 25, 280)
-
-    draw_text("NEXT PIECE", 17, WHITE, BOARD_WIDTH + 25, 335)
-    draw_next_piece(next_piece)
-
-    draw_text("CONTROLS", 17, CYAN, BOARD_WIDTH + 25, 450)
-
-    controls = [
-        "LEFT / RIGHT",
-        "Move",
-        "UP",
-        "Rotate",
-        "DOWN",
-        "Soft Drop",
-        "SPACE",
-        "Hard Drop",
-        "R",
-        "Restart",
-        "P",
-        "Pause"
-    ]
-
-    for i, text in enumerate(controls):
-        color = WHITE if i % 2 == 0 else GRAY
-        draw_text(text, 13, color, BOARD_WIDTH + 25, 475 + i * 14)
-
-
-# -----------------------------
-# MAIN GAME
-# -----------------------------
-def main():
-    board = create_board()
-
-    current_piece = Piece()
-    next_piece = Piece()
+# Reset game
+def reset_game():
+    global score, game_speed, obstacles
+    global game_over, velocity_y, on_ground, spawn_timer
 
     score = 0
-    lines = 0
-    level = 1
-
-    fall_time = 0
-    fall_speed = 700
-
+    game_speed = 6
+    obstacles = []
+    spawn_timer = 0
+    velocity_y = 0
+    on_ground = True
+    dino.y = GROUND_Y - 55
     game_over = False
-    paused = False
-    running = True
-
-    while running:
-
-        dt = clock.tick(60)
-        fall_time += dt
-
-        # -------------------------
-        # EVENTS
-        # -------------------------
-        for event in pygame.event.get():
-
-            if event.type == pygame.QUIT:
-                running = False
-
-            if event.type == pygame.KEYDOWN:
-
-                if event.key == pygame.K_ESCAPE:
-                    running = False
-
-                if event.key == pygame.K_r:
-               		board = create_board()
-              		current_piece = Piece()
-             		next_piece = Piece()
-                	score = 0
-                	lines = 0
-               		level = 1
-               		fall_time = 0
-               		game_over = False
-              		paused = False
 
 
-                if event.key == pygame.K_p and not game_over:
-                    paused = not paused
+# Main game loop
+while True:
 
-                if game_over or paused:
-                    continue
+    clock.tick(60)
 
-                if event.key == pygame.K_LEFT:
-                    current_piece.x -= 1
+    for event in pygame.event.get():
 
-                    if not valid_position(board, current_piece):
-                        current_piece.x += 1
+        if event.type == pygame.QUIT:
+            pygame.quit()
+            sys.exit()
 
-                elif event.key == pygame.K_RIGHT:
-                    current_piece.x += 1
+        if event.type == pygame.KEYDOWN:
 
-                    if not valid_position(board, current_piece):
-                        current_piece.x -= 1
+            if event.key == pygame.K_SPACE:
 
-                elif event.key == pygame.K_UP:
-                    old_shape = current_piece.shape
+                if game_over:
+                    reset_game()
 
-                    current_piece.rotate()
+                elif on_ground:
+                    velocity_y = jump_power
+                    on_ground = False
 
-                    if not valid_position(board, current_piece):
-                        current_piece.shape = old_shape
+            if event.key == pygame.K_r and game_over:
+                reset_game()
 
-                elif event.key == pygame.K_DOWN:
-                    current_piece.y += 1
+    screen.fill(WHITE)
 
-                    if valid_position(board, current_piece):
-                        score += 1
-                    else:
-                        current_piece.y -= 1
+    # Ground
+    pygame.draw.line(screen, BLACK,
+                     (0, GROUND_Y),
+                     (WIDTH, GROUND_Y), 3)
 
-                elif event.key == pygame.K_SPACE:
-                    while True:
-                        current_piece.y += 1
+    if not game_over:
 
-                        if not valid_position(board, current_piece):
-                            current_piece.y -= 1
-                            break
+        # Purple Guy physics
+        velocity_y += gravity
+        dino.y += int(velocity_y)
 
-                        score += 2
+        if dino.bottom >= GROUND_Y:
+            dino.bottom = GROUND_Y
+            velocity_y = 0
+            on_ground = True
 
-                    fall_time = fall_speed
+        # Spawn obstacles
+        spawn_timer += 1
 
-        # -------------------------
-        # AUTOMATIC FALLING
-        # -------------------------
-        if not game_over and not paused:
+        if spawn_timer >= spawn_delay:
 
-            fall_speed = max(100, 700 - (level - 1) * 55)
+            height = random.choice([35, 45, 55])
 
-            if fall_time >= fall_speed:
-
-                current_piece.y += 1
-
-                if not valid_position(board, current_piece):
-                    current_piece.y -= 1
-
-                    if not lock_piece(board, current_piece):
-                        game_over = True
-                    else:
-                        cleared = clear_lines(board)
-
-                        if cleared == 1:
-                            score += 100 * level
-                        elif cleared == 2:
-                            score += 300 * level
-                        elif cleared == 3:
-                            score += 500 * level
-                        elif cleared == 4:
-                            score += 800 * level
-
-                        lines += cleared
-                        level = lines // 10 + 1
-
-                        current_piece = next_piece
-                        next_piece = Piece()
-
-                        if not valid_position(board, current_piece):
-                            game_over = True
-
-                fall_time = 0
-
-        # -------------------------
-        # DRAW EVERYTHING
-        # -------------------------
-        draw_board(board)
-        draw_piece(current_piece)
-        draw_sidebar(score, lines, level, next_piece)
-
-        if paused:
-            draw_text(
-                "PAUSED",
-                35,
-                YELLOW,
-                45,
-                SCREEN_HEIGHT // 2
+            obstacle = pygame.Rect(
+                WIDTH,
+                GROUND_Y - height,
+                25,
+                height
             )
 
-        if game_over:
-            overlay = pygame.Surface(
-                (BOARD_WIDTH, BOARD_HEIGHT),
-                pygame.SRCALPHA
+            obstacles.append(obstacle)
+
+            spawn_timer = 0
+            spawn_delay = random.randint(65, 110)
+
+        # Move obstacles
+        for obstacle in obstacles:
+            obstacle.x -= game_speed
+
+        # Remove obstacles off screen
+        obstacles = [
+            obs for obs in obstacles if obs.right > 0
+        ]
+
+        # Collision detection
+        for obstacle in obstacles:
+            if dino.colliderect(obstacle):
+                game_over = True
+
+        # Update score
+        score += 1
+        high_score = max(high_score, score)
+
+        # Increase difficulty
+        if score % 500 == 0:
+            game_speed += 0.5
+
+    # Draw Purple Guy
+    draw_dino()
+
+    # Draw obstacles
+    for obstacle in obstacles:
+        draw_obstacle(obstacle)
+
+    # Display score
+    score_text = font.render(
+        f"Score: {score // 10}", True, BLACK
+    )
+    screen.blit(score_text, (WIDTH - 180, 20))
+
+    high_text = font.render(
+        f"Best: {high_score // 10}", True, BLACK
+    )
+    screen.blit(high_text, (20, 20))
+
+    # Game over screen
+    if game_over:
+
+        message = big_font.render(
+            "GAME OVER!", True, BLACK
+        )
+
+        restart = font.render(
+            "Press SPACE or R to restart", True, GRAY
+        )
+
+        screen.blit(
+            message,
+            message.get_rect(
+                center=(WIDTH // 2, 160)
             )
-            overlay.fill((0, 0, 0, 190))
-            screen.blit(overlay, (0, 0))
+        )
 
-            draw_text(
-                "GAME OVER",
-                32,
-                RED,
-                35,
-                SCREEN_HEIGHT // 2 - 30
+        screen.blit(
+            restart,
+            restart.get_rect(
+                center=(WIDTH // 2, 220)
             )
+        )
 
-            draw_text(
-                "Press R to Restart",
-                17,
-                WHITE,
-                42,
-                SCREEN_HEIGHT // 2 + 15
-            )
-
-        pygame.display.update()
-
-    pygame.quit()
-    sys.exit()
-
-
-if __name__ == "__main__":
-    main()
-
-
+    pygame.display.update()
