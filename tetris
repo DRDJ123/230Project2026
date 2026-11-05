@@ -1,7 +1,8 @@
 
 import pygame
 import random
-import sys
+import json
+import os
 
 pygame.init()
 
@@ -20,9 +21,44 @@ SCREEN_WIDTH = BOARD_WIDTH + SIDE_WIDTH
 SCREEN_HEIGHT = BOARD_HEIGHT
 
 screen = pygame.display.set_mode((SCREEN_WIDTH, SCREEN_HEIGHT))
-pygame.display.set_caption("Colorful Tetris")
+pygame.display.set_caption("Bird Tetris")
 
 clock = pygame.time.Clock()
+
+# -----------------------------
+# HIGH SCORE SAVING
+# -----------------------------
+HIGH_SCORE_FILE = "tetris_high_score.json"
+
+
+def load_high_score():
+    try:
+        with open(HIGH_SCORE_FILE, "r") as file:
+            data = json.load(file)
+            return int(data.get("high_score", 0))
+    except (FileNotFoundError, json.JSONDecodeError,
+            TypeError, ValueError):
+        return 0
+
+
+def save_high_score(value):
+    try:
+        with open(HIGH_SCORE_FILE, "w") as file:
+            json.dump({"high_score": value}, file)
+    except OSError:
+        print("Could not save high score.")
+
+
+high_score = load_high_score()
+
+
+def update_high_score(score):
+    global high_score
+
+    if score > high_score:
+        high_score = score
+        save_high_score(high_score)
+
 
 # -----------------------------
 # COLORS
@@ -30,7 +66,7 @@ clock = pygame.time.Clock()
 BLACK = (15, 15, 25)
 DARK_GRAY = (35, 35, 50)
 WHITE = (245, 245, 245)
-GRAY = (80, 80, 95)
+GRAY = (150, 150, 165)
 
 CYAN = (0, 230, 230)
 BLUE = (60, 100, 255)
@@ -72,6 +108,7 @@ SHAPES = [
 
 
 class Piece:
+
     def __init__(self):
         index = random.randrange(len(SHAPES))
         self.shape = [row[:] for row in SHAPES[index]]
@@ -89,11 +126,16 @@ class Piece:
 # GAME FUNCTIONS
 # -----------------------------
 def create_board():
-    return [[None for _ in range(COLS)] for _ in range(ROWS)]
+    return [
+        [None for _ in range(COLS)]
+        for _ in range(ROWS)
+    ]
 
 
 def valid_position(board, piece):
+
     for row_index, row in enumerate(piece.shape):
+
         for col_index, cell in enumerate(row):
 
             if cell:
@@ -110,7 +152,9 @@ def valid_position(board, piece):
 
 
 def lock_piece(board, piece):
+
     for row_index, row in enumerate(piece.shape):
+
         for col_index, cell in enumerate(row):
 
             if cell:
@@ -126,20 +170,29 @@ def lock_piece(board, piece):
 
 
 def clear_lines(board):
+
     remaining_rows = [
-        row for row in board if any(cell is None for cell in row)
+        row for row in board
+        if any(cell is None for cell in row)
     ]
 
     cleared = ROWS - len(remaining_rows)
 
     for _ in range(cleared):
-        remaining_rows.insert(0, [None for _ in range(COLS)])
+        remaining_rows.insert(
+            0, [None for _ in range(COLS)]
+        )
 
     board[:] = remaining_rows
+
     return cleared
 
 
+# -----------------------------
+# DRAWING FUNCTIONS
+# -----------------------------
 def draw_block(surface, x, y, color):
+
     rect = pygame.Rect(
         x * CELL_SIZE,
         y * CELL_SIZE,
@@ -147,26 +200,36 @@ def draw_block(surface, x, y, color):
         CELL_SIZE
     )
 
-    pygame.draw.rect(surface, color, rect.inflate(-2, -2), border_radius=5)
-
-    # Light highlight
-    pygame.draw.line(
-        surface, WHITE,
-        (rect.x + 5, rect.y + 5),
-        (rect.right - 5, rect.y + 5), 2
+    pygame.draw.rect(
+        surface,
+        color,
+        rect.inflate(-2, -2),
+        border_radius=5
     )
 
     pygame.draw.line(
-        surface, WHITE,
+        surface,
+        WHITE,
         (rect.x + 5, rect.y + 5),
-        (rect.x + 5, rect.bottom - 5), 2
+        (rect.right - 5, rect.y + 5),
+        2
+    )
+
+    pygame.draw.line(
+        surface,
+        WHITE,
+        (rect.x + 5, rect.y + 5),
+        (rect.x + 5, rect.bottom - 5),
+        2
     )
 
 
 def draw_board(board):
+
     screen.fill(BLACK)
 
     for y in range(ROWS):
+
         for x in range(COLS):
 
             rect = pygame.Rect(
@@ -177,8 +240,10 @@ def draw_board(board):
             )
 
             pygame.draw.rect(
-                screen, DARK_GRAY,
-                rect, 1
+                screen,
+                DARK_GRAY,
+                rect,
+                1
             )
 
             if board[y][x] is not None:
@@ -186,7 +251,9 @@ def draw_board(board):
 
 
 def draw_piece(piece):
+
     for row_index, row in enumerate(piece.shape):
+
         for col_index, cell in enumerate(row):
 
             if cell:
@@ -198,13 +265,17 @@ def draw_piece(piece):
 
 
 def draw_next_piece(piece):
+
+    # Preview is positioned in the former bird display area.
     start_x = BOARD_WIDTH + 50
-    start_y = 190
+    start_y = 365
 
     for row_index, row in enumerate(piece.shape):
+
         for col_index, cell in enumerate(row):
 
             if cell:
+
                 rect = pygame.Rect(
                     start_x + col_index * 25,
                     start_y + row_index * 25,
@@ -221,58 +292,217 @@ def draw_next_piece(piece):
 
 
 def draw_text(text, size, color, x, y):
-    font = pygame.font.SysFont("Arial", size, bold=True)
+
+    font = pygame.font.SysFont(
+        "Arial",
+        size,
+        bold=True
+    )
+
     rendered = font.render(str(text), True, color)
+
     screen.blit(rendered, (x, y))
 
 
+# -----------------------------
+# SMALL BIRD LOGO
+# -----------------------------
+def draw_bird():
+
+    # Small decorative bird logo beside the title.
+    x = BOARD_WIDTH + 140
+    y = 40
+
+    # Tail
+    pygame.draw.polygon(
+        screen,
+        ORANGE,
+        [
+            (x - 15, y + 4),
+            (x - 26, y - 3),
+            (x - 23, y + 10)
+        ]
+    )
+
+    # Body
+    pygame.draw.ellipse(
+        screen,
+        YELLOW,
+        (x - 16, y - 10, 30, 23)
+    )
+
+    # Wing
+    pygame.draw.ellipse(
+        screen,
+        (220, 145, 25),
+        (x - 7, y + 1, 14, 9)
+    )
+
+    # Beak
+    pygame.draw.polygon(
+        screen,
+        ORANGE,
+        [
+            (x + 12, y - 5),
+            (x + 25, y),
+            (x + 12, y + 5)
+        ]
+    )
+
+    # Eye
+    pygame.draw.circle(
+        screen,
+        WHITE,
+        (x + 7, y - 5),
+        4
+    )
+
+    pygame.draw.circle(
+        screen,
+        BLACK,
+        (x + 8, y - 5),
+        2
+    )
+
+
+# -----------------------------
+# SIDEBAR
+# -----------------------------
 def draw_sidebar(score, lines, level, next_piece):
+
     pygame.draw.rect(
         screen,
         DARK_GRAY,
         (BOARD_WIDTH, 0, SIDE_WIDTH, SCREEN_HEIGHT)
     )
 
-    draw_text("TETRIS", 30, CYAN, BOARD_WIDTH + 25, 25)
+    # Title and bird logo
+    draw_text(
+        "TETRIS",
+        30,
+        CYAN,
+        BOARD_WIDTH + 20,
+        20
+    )
 
-    draw_text("SCORE", 18, WHITE, BOARD_WIDTH + 25, 90)
-    draw_text(score, 25, YELLOW, BOARD_WIDTH + 25, 115)
+    draw_bird()
 
-    draw_text("LINES", 18, WHITE, BOARD_WIDTH + 25, 145)
-    draw_text(lines, 25, GREEN, BOARD_WIDTH + 25, 170)
+    # Score
+    draw_text(
+        "SCORE",
+        16,
+        WHITE,
+        BOARD_WIDTH + 25,
+        75
+    )
 
-    draw_text("LEVEL", 18, WHITE, BOARD_WIDTH + 25, 255)
-    draw_text(level, 25, ORANGE, BOARD_WIDTH + 25, 280)
+    draw_text(
+        score,
+        24,
+        YELLOW,
+        BOARD_WIDTH + 25,
+        96
+    )
 
-    draw_text("NEXT PIECE", 17, WHITE, BOARD_WIDTH + 25, 335)
+    # High score
+    draw_text(
+        "HIGH SCORE",
+        15,
+        WHITE,
+        BOARD_WIDTH + 25,
+        133
+    )
+
+    draw_text(
+        high_score,
+        22,
+        YELLOW,
+        BOARD_WIDTH + 25,
+        153
+    )
+
+    # Lines
+    draw_text(
+        "LINES",
+        16,
+        WHITE,
+        BOARD_WIDTH + 25,
+        195
+    )
+
+    draw_text(
+        lines,
+        23,
+        GREEN,
+        BOARD_WIDTH + 25,
+        215
+    )
+
+    # Level
+    draw_text(
+        "LEVEL",
+        16,
+        WHITE,
+        BOARD_WIDTH + 25,
+        252
+    )
+
+    draw_text(
+        level,
+        23,
+        ORANGE,
+        BOARD_WIDTH + 25,
+        272
+    )
+
+    # Next piece preview
+    draw_text(
+        "NEXT PIECE",
+        17,
+        WHITE,
+        BOARD_WIDTH + 25,
+        325
+    )
+
     draw_next_piece(next_piece)
 
-    draw_text("CONTROLS", 17, CYAN, BOARD_WIDTH + 25, 450)
+    # Controls
+    draw_text(
+        "CONTROLS",
+        15,
+        CYAN,
+        BOARD_WIDTH + 25,
+        485
+    )
 
     controls = [
-        "LEFT / RIGHT",
-        "Move",
-        "UP",
-        "Rotate",
-        "DOWN",
-        "Soft Drop",
-        "SPACE",
-        "Hard Drop",
-        "R",
-        "Restart",
-        "P",
-        "Pause"
+        "LEFT / RIGHT  Move",
+        "UP            Rotate",
+        "DOWN          Soft drop",
+        "SPACE         Hard drop",
+        "R             Restart",
+        "P             Pause",
+        "ESC           Quit"
     ]
 
     for i, text in enumerate(controls):
-        color = WHITE if i % 2 == 0 else GRAY
-        draw_text(text, 13, color, BOARD_WIDTH + 25, 475 + i * 14)
+
+        draw_text(
+            text,
+            10,
+            GRAY,
+            BOARD_WIDTH + 12,
+            505 + i * 13
+        )
 
 
 # -----------------------------
 # MAIN GAME
 # -----------------------------
 def main():
+
+    global high_score
+
     board = create_board()
 
     current_piece = Piece()
@@ -292,7 +522,9 @@ def main():
     while running:
 
         dt = clock.tick(60)
-        fall_time += dt
+
+        if not paused and not game_over:
+            fall_time += dt
 
         # -------------------------
         # EVENTS
@@ -307,37 +539,47 @@ def main():
                 if event.key == pygame.K_ESCAPE:
                     running = False
 
+                # Restart
                 if event.key == pygame.K_r:
+
                     board = create_board()
                     current_piece = Piece()
                     next_piece = Piece()
+
                     score = 0
                     lines = 0
                     level = 1
+
                     fall_time = 0
                     game_over = False
                     paused = False
 
-
+                # Pause
                 if event.key == pygame.K_p and not game_over:
                     paused = not paused
 
                 if game_over or paused:
                     continue
 
+                # Move left
                 if event.key == pygame.K_LEFT:
+
                     current_piece.x -= 1
 
                     if not valid_position(board, current_piece):
                         current_piece.x += 1
 
+                # Move right
                 elif event.key == pygame.K_RIGHT:
+
                     current_piece.x += 1
 
                     if not valid_position(board, current_piece):
                         current_piece.x -= 1
 
+                # Rotate
                 elif event.key == pygame.K_UP:
+
                     old_shape = current_piece.shape
 
                     current_piece.rotate()
@@ -345,16 +587,23 @@ def main():
                     if not valid_position(board, current_piece):
                         current_piece.shape = old_shape
 
+                # Soft drop
                 elif event.key == pygame.K_DOWN:
+
                     current_piece.y += 1
 
                     if valid_position(board, current_piece):
                         score += 1
+                        update_high_score(score)
+
                     else:
                         current_piece.y -= 1
 
+                # Hard drop
                 elif event.key == pygame.K_SPACE:
+
                     while True:
+
                         current_piece.y += 1
 
                         if not valid_position(board, current_piece):
@@ -363,6 +612,7 @@ def main():
 
                         score += 2
 
+                    update_high_score(score)
                     fall_time = fall_speed
 
         # -------------------------
@@ -370,37 +620,51 @@ def main():
         # -------------------------
         if not game_over and not paused:
 
-            fall_speed = max(100, 700 - (level - 1) * 55)
+            fall_speed = max(
+                100,
+                700 - (level - 1) * 55
+            )
 
             if fall_time >= fall_speed:
 
                 current_piece.y += 1
 
                 if not valid_position(board, current_piece):
+
                     current_piece.y -= 1
 
                     if not lock_piece(board, current_piece):
+
                         game_over = True
+                        update_high_score(score)
+
                     else:
+
                         cleared = clear_lines(board)
 
                         if cleared == 1:
                             score += 100 * level
+
                         elif cleared == 2:
                             score += 300 * level
+
                         elif cleared == 3:
                             score += 500 * level
+
                         elif cleared == 4:
                             score += 800 * level
 
                         lines += cleared
                         level = lines // 10 + 1
 
+                        update_high_score(score)
+
                         current_piece = next_piece
                         next_piece = Piece()
 
                         if not valid_position(board, current_piece):
                             game_over = True
+                            update_high_score(score)
 
                 fall_time = 0
 
@@ -409,23 +673,44 @@ def main():
         # -------------------------
         draw_board(board)
         draw_piece(current_piece)
-        draw_sidebar(score, lines, level, next_piece)
 
+        draw_sidebar(
+            score,
+            lines,
+            level,
+            next_piece
+        )
+
+        # Paused screen
         if paused:
-            draw_text(
-                "PAUSED",
-                35,
-                YELLOW,
-                45,
-                SCREEN_HEIGHT // 2
-            )
 
-        if game_over:
             overlay = pygame.Surface(
                 (BOARD_WIDTH, BOARD_HEIGHT),
                 pygame.SRCALPHA
             )
+
             overlay.fill((0, 0, 0, 190))
+
+            screen.blit(overlay, (0, 0))
+
+            draw_text(
+                "PAUSED",
+                35,
+                YELLOW,
+                75,
+                SCREEN_HEIGHT // 2
+            )
+
+        # Game over screen
+        if game_over:
+
+            overlay = pygame.Surface(
+                (BOARD_WIDTH, BOARD_HEIGHT),
+                pygame.SRCALPHA
+            )
+
+            overlay.fill((0, 0, 0, 190))
+
             screen.blit(overlay, (0, 0))
 
             draw_text(
@@ -433,7 +718,23 @@ def main():
                 32,
                 RED,
                 35,
-                SCREEN_HEIGHT // 2 - 30
+                SCREEN_HEIGHT // 2 - 60
+            )
+
+            draw_text(
+                f"SCORE: {score}",
+                20,
+                WHITE,
+                55,
+                SCREEN_HEIGHT // 2 - 20
+            )
+
+            draw_text(
+                f"HIGH SCORE: {high_score}",
+                18,
+                YELLOW,
+                40,
+                SCREEN_HEIGHT // 2 + 10
             )
 
             draw_text(
@@ -441,13 +742,12 @@ def main():
                 17,
                 WHITE,
                 42,
-                SCREEN_HEIGHT // 2 + 15
+                SCREEN_HEIGHT // 2 + 45
             )
 
         pygame.display.update()
 
     pygame.quit()
-    sys.exit()
 
 
 if __name__ == "__main__":
