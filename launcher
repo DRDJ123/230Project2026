@@ -1,0 +1,362 @@
+
+import pygame
+import subprocess
+import sys
+import os
+
+pygame.init()
+
+# -----------------------------
+# SETTINGS
+# -----------------------------
+WIDTH = 800
+HEIGHT = 600
+
+screen = pygame.display.set_mode((WIDTH, HEIGHT))
+pygame.display.set_caption("Arcade Game Launcher")
+
+clock = pygame.time.Clock()
+
+TITLE_FONT = pygame.font.SysFont("Arial", 55, bold=True)
+FONT = pygame.font.SysFont("Arial", 28, bold=True)
+SMALL_FONT = pygame.font.SysFont("Arial", 20)
+
+# -----------------------------
+# COLORS
+# -----------------------------
+BLACK = (15, 15, 25)
+DARK = (30, 30, 45)
+PURPLE = (140, 70, 220)
+LIGHT_PURPLE = (185, 125, 255)
+WHITE = (245, 245, 245)
+GRAY = (150, 150, 165)
+YELLOW = (255, 220, 60)
+GREEN = (60, 210, 110)
+RED = (240, 70, 80)
+
+# -----------------------------
+# GAME LIST
+# Change filenames here if yours
+# are named differently.
+# -----------------------------
+GAMES = [
+    {
+        "name": "Tetris",
+        "file": "tetris.py",
+        "id": "tetris",
+        "description": "Stack blocks and clear lines!"
+    },
+    {
+        "name": "Bird Run",
+        "file": "bird_run.py",
+        "id": "bird_run",
+        "description": "Jump over obstacles and survive!"
+    },
+    {
+        "name": "Flappy Bird",
+        "file": "flappy_bird.py",
+        "id": "flappy_bird",
+        "description": "Fly through the pipes!"
+    }
+]
+
+# -----------------------------
+# PLAYER SETTINGS
+# -----------------------------
+player_name = ""
+
+selected_game = 0
+message = ""
+message_color = WHITE
+
+
+# -----------------------------
+# DRAW TEXT
+# -----------------------------
+def draw_text(text, font, color, x, y, center=False):
+
+    rendered = font.render(str(text), True, color)
+
+    if center:
+        rect = rendered.get_rect(center=(x, y))
+        screen.blit(rendered, rect)
+    else:
+        screen.blit(rendered, (x, y))
+
+
+# -----------------------------
+# DRAW MENU
+# -----------------------------
+def draw_menu():
+
+    screen.fill(BLACK)
+
+    # Title
+    draw_text(
+        "ARCADE",
+        TITLE_FONT,
+        PURPLE,
+        WIDTH // 2,
+        65,
+        center=True
+    )
+
+    draw_text(
+        "GAME COLLECTION",
+        FONT,
+        WHITE,
+        WIDTH // 2,
+        115,
+        center=True
+    )
+
+    # Player name
+    draw_text(
+        "ENTER YOUR NAME:",
+        FONT,
+        WHITE,
+        WIDTH // 2,
+        180,
+        center=True
+    )
+
+    # Name input box
+    input_rect = pygame.Rect(
+        WIDTH // 2 - 190,
+        205,
+        380,
+        50
+    )
+
+    pygame.draw.rect(
+        screen,
+        DARK,
+        input_rect,
+        border_radius=10
+    )
+
+    pygame.draw.rect(
+        screen,
+        PURPLE,
+        input_rect,
+        3,
+        border_radius=10
+    )
+
+    displayed_name = player_name
+
+    if not displayed_name:
+        displayed_name = "Type your name here..."
+
+    name_color = WHITE if player_name else GRAY
+
+    draw_text(
+        displayed_name,
+        FONT,
+        name_color,
+        WIDTH // 2,
+        230,
+        center=True
+    )
+
+    # Game selection heading
+    draw_text(
+        "CHOOSE A GAME",
+        FONT,
+        YELLOW,
+        WIDTH // 2,
+        300,
+        center=True
+    )
+
+    # Game selection buttons
+    for i, game in enumerate(GAMES):
+
+        y = 345 + i * 65
+
+        button_rect = pygame.Rect(
+            WIDTH // 2 - 210,
+            y,
+            420,
+            52
+        )
+
+        if i == selected_game:
+            button_color = PURPLE
+            text_color = WHITE
+        else:
+            button_color = DARK
+            text_color = GRAY
+
+        pygame.draw.rect(
+            screen,
+            button_color,
+            button_rect,
+            border_radius=10
+        )
+
+        if i == selected_game:
+            pygame.draw.rect(
+                screen,
+                LIGHT_PURPLE,
+                button_rect,
+                3,
+                border_radius=10
+            )
+
+        draw_text(
+            game["name"],
+            FONT,
+            text_color,
+            WIDTH // 2,
+            y + 26,
+            center=True
+        )
+
+    # Description of selected game
+    description = GAMES[selected_game]["description"]
+
+    draw_text(
+        description,
+        SMALL_FONT,
+        WHITE,
+        WIDTH // 2,
+        555,
+        center=True
+    )
+
+    # Instructions
+    draw_text(
+        "UP / DOWN: Select game     ENTER: Play     ESC: Quit",
+        SMALL_FONT,
+        GRAY,
+        WIDTH // 2,
+        585,
+        center=True
+    )
+
+    # Error messages
+    if message:
+        draw_text(
+            message,
+            SMALL_FONT,
+            message_color,
+            WIDTH // 2,
+            275,
+            center=True
+        )
+
+
+# -----------------------------
+# LAUNCH GAME
+# -----------------------------
+def launch_game(game):
+
+    global message, message_color
+
+    game_path = os.path.join(
+        os.path.dirname(os.path.abspath(__file__)),
+        game["file"]
+    )
+
+    # Check whether the game file exists
+    if not os.path.isfile(game_path):
+
+        message = f"Could not find {game['file']}!"
+        message_color = RED
+        return
+
+    # Prepare information for the game
+    game_environment = os.environ.copy()
+
+    game_environment["PLAYER_NAME"] = player_name.strip()
+    game_environment["GAME_ID"] = game["id"]
+
+    # Close launcher display before starting another Pygame window
+    pygame.display.quit()
+
+    try:
+        subprocess.run(
+            [sys.executable, game_path],
+            env=game_environment,
+            check=False
+        )
+
+    except OSError as error:
+        print("Could not launch game:", error)
+
+    # Reopen launcher display after game finishes
+    pygame.display.init()
+
+    global screen
+
+    screen = pygame.display.set_mode((WIDTH, HEIGHT))
+    pygame.display.set_caption("Arcade Game Launcher")
+
+    message = ""
+    message_color = WHITE
+
+
+# -----------------------------
+# MAIN MENU LOOP
+# -----------------------------
+running = True
+
+while running:
+
+    clock.tick(60)
+
+    for event in pygame.event.get():
+
+        if event.type == pygame.QUIT:
+            running = False
+
+        elif event.type == pygame.KEYDOWN:
+
+            # Quit
+            if event.key == pygame.K_ESCAPE:
+                running = False
+
+            # Enter player name
+            elif event.key == pygame.K_BACKSPACE:
+                player_name = player_name[:-1]
+                message = ""
+
+            elif event.key == pygame.K_UP:
+                selected_game = (
+                    selected_game - 1
+                ) % len(GAMES)
+
+                message = ""
+
+            elif event.key == pygame.K_DOWN:
+                selected_game = (
+                    selected_game + 1
+                ) % len(GAMES)
+
+                message = ""
+
+            # Start selected game
+            elif event.key == pygame.K_RETURN:
+
+                if not player_name.strip():
+                    message = "Please enter your name first!"
+                    message_color = RED
+
+                else:
+                    launch_game(GAMES[selected_game])
+
+            # Add typed characters to name
+            else:
+                if event.unicode.isprintable():
+                    if len(player_name) < 16:
+                        player_name += event.unicode
+                        message = ""
+
+    draw_menu()
+
+    pygame.display.flip()
+
+
+pygame.quit()
+sys.exit()
