@@ -9,8 +9,8 @@ pygame.init()
 # -----------------------------
 # SETTINGS
 # -----------------------------
-WIDTH = 800
-HEIGHT = 600
+WIDTH = 1200
+HEIGHT = 1200
 
 screen = pygame.display.set_mode((WIDTH, HEIGHT))
 pygame.display.set_caption("Arcade Game Launcher")
@@ -43,19 +43,19 @@ GAMES = [
     {
         "name": "Tetris",
         "file": "tetris.py",
-        "id": "tetris",
+        "id": "Tetris",
         "description": "Stack blocks and clear lines!"
     },
     {
         "name": "Bird Run",
         "file": "bird_run.py",
-        "id": "bird_run",
+        "id": "Dinosaur",
         "description": "Jump over obstacles and survive!"
     },
     {
         "name": "Flappy Bird",
         "file": "flappy_bird.py",
-        "id": "flappy_bird",
+        "id": "FlappyBird",
         "description": "Fly through the pipes!"
     }
 ]
