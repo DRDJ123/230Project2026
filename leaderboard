@@ -1,0 +1,75 @@
+
+import json
+import os
+import threading
+import urllib.request
+import urllib.error
+
+# Pi #2 leaderboard server
+SERVER_URL = os.environ.get(
+    "LEADERBOARD_URL",
+    "http://10.83.4.202:5000/score"
+)
+
+
+class ScoreSubmission:
+
+    def __init__(self, game_name, player_name, final_score):
+        self.status = "Uploading score..."
+
+        # Send score in a background thread
+        thread = threading.Thread(
+            target=self.send_score,
+            args=(game_name, player_name, final_score),
+            daemon=True
+        )
+
+        thread.start()
+
+    def send_score(self, game_name, player_name, final_score):
+
+        payload = {
+            "game": game_name,
+            "name": player_name,
+            "score": int(final_score)
+        }
+
+        try:
+            data = json.dumps(payload).encode("utf-8")
+
+            request = urllib.request.Request(
+                SERVER_URL,
+                data=data,
+                headers={"Content-Type": "application/json"},
+                method="POST"
+            )
+
+            with urllib.request.urlopen(request, timeout=2.0) as response:
+
+                if response.status == 201:
+                    self.status = "Score uploaded!"
+                    print("Score successfully posted!")
+
+                else:
+                    self.status = "Score rejected by server"
+                    print("Server rejected score:", response.status)
+
+        except urllib.error.HTTPError as error:
+            self.status = "Score rejected by server"
+            print("Server error:", error.code)
+
+        except (urllib.error.URLError, TimeoutError, OSError) as error:
+            self.status = "Offline mode: score not uploaded"
+            print("Network warning:", error)
+
+        except Exception as error:
+            self.status = "Could not upload score"
+            print("Score submission error:", error)
+
+
+def submit_final_score(game_name, player_name, final_score):
+    return ScoreSubmission(
+        game_name,
+        player_name,
+        final_score
+    )
