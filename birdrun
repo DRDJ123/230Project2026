@@ -21,7 +21,7 @@ pygame.init()
 # -----------------------------
 
 PLAYER_NAME = os.environ.get("PLAYER_NAME", "Player")
-GAME_ID = os.environ.get("GAME_ID", "bird_run")
+GAME_ID = os.environ.get("GAME_ID", "Dinosaur")
 
 WIDTH = 800
 HEIGHT = 400
