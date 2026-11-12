@@ -8,7 +8,7 @@ from leaderboard import submit_final_score
 pygame.init()
 
 PLAYER_NAME = os.environ.get("PLAYER_NAME", "Player1")
-GAME_ID = os.environ.get("GAME_ID", "tetris")
+GAME_ID = os.environ.get("GAME_ID", "Tetris")
 
 # -----------------------------
 # GAME SETTINGS
