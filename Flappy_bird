@@ -1,9 +1,26 @@
+
 import pygame
 import random
 import json
 import os
+import sys
 
-# Initialize Pygame
+from leaderboard import submit_final_score
+
+# -----------------------------
+# PLAYER AND LEADERBOARD SETTINGS
+# -----------------------------
+
+PLAYER_NAME = os.environ.get("PLAYER_NAME", "Player1")
+GAME_ID = os.environ.get("GAME_ID", "flappy_bird")
+
+score_submitted = False
+submission = None
+
+# -----------------------------
+# INITIALIZE PYGAME
+# -----------------------------
+
 pygame.init()
 
 # Set up the display
@@ -15,8 +32,19 @@ clock = pygame.time.Clock()
 font = pygame.font.SysFont(None, 60)
 small_font = pygame.font.SysFont(None, 42)
 
-# High-score file
-HIGH_SCORE_FILE = "high_score.json"
+# Colors
+WHITE = (255, 255, 255)
+GRAY = (180, 180, 180)
+GREEN = (60, 220, 100)
+
+# -----------------------------
+# HIGH SCORE SAVING
+# -----------------------------
+
+HIGH_SCORE_FILE = os.path.join(
+    os.path.dirname(os.path.abspath(__file__)),
+    "high_score.json"
+)
 
 
 def load_high_score():
@@ -24,7 +52,13 @@ def load_high_score():
         with open(HIGH_SCORE_FILE, "r") as file:
             data = json.load(file)
             return int(data.get("high_score", 0))
-    except (FileNotFoundError, json.JSONDecodeError, TypeError, ValueError):
+
+    except (
+        FileNotFoundError,
+        json.JSONDecodeError,
+        TypeError,
+        ValueError
+    ):
         return 0
 
 
@@ -32,50 +66,85 @@ def save_high_score(value):
     try:
         with open(HIGH_SCORE_FILE, "w") as file:
             json.dump({"high_score": value}, file)
+
     except OSError:
         print("Could not save high score.")
 
 
 high_score = load_high_score()
 
-# Bird properties
+# -----------------------------
+# BIRD PROPERTIES
+# -----------------------------
+
 bird_x = 180
 bird_y = screen_height // 2
 bird_velocity = 0
+
 gravity = 0.55
 flap_strength = -9
 
-# Pipe properties
+# -----------------------------
+# PIPE PROPERTIES
+# -----------------------------
+
 pipe_width = 90
 pipe_gap = 270
 pipe_velocity = 4
 pipes = []
 
-# Score properties
+# -----------------------------
+# SCORE PROPERTIES
+# -----------------------------
+
 score = 0
 game_over = False
 
 
+# -----------------------------
+# RESET GAME
+# -----------------------------
+
 def reset_game():
-    global bird_y, bird_velocity, pipes, score, game_over
+
+    global bird_y, bird_velocity, pipes
+    global score, game_over
+    global score_submitted, submission
 
     bird_y = screen_height // 2
     bird_velocity = 0
+
     pipes = []
+
     score = 0
     game_over = False
 
+    # Allow a new score submission after restarting
+    score_submitted = False
+    submission = None
+
+
+# -----------------------------
+# CREATE PIPE
+# -----------------------------
 
 def create_pipe():
-    gap_y = random.randint(250, screen_height - 250)
+
+    gap_y = random.randint(
+        250,
+        screen_height - 250
+    )
 
     top_pipe = pygame.Rect(
-        screen_width, 0, pipe_width,
+        screen_width,
+        0,
+        pipe_width,
         gap_y - pipe_gap // 2
     )
 
     bottom_pipe = pygame.Rect(
-        screen_width, gap_y + pipe_gap // 2,
+        screen_width,
+        gap_y + pipe_gap // 2,
         pipe_width,
         screen_height - (gap_y + pipe_gap // 2)
     )
@@ -83,7 +152,12 @@ def create_pipe():
     return bottom_pipe, top_pipe, False
 
 
+# -----------------------------
+# DRAW BIRD
+# -----------------------------
+
 def draw_bird():
+
     x = int(bird_x)
     y = int(bird_y)
 
@@ -91,24 +165,28 @@ def draw_bird():
     wing_offset = -5 if bird_velocity < 0 else 5
 
     pygame.draw.ellipse(
-        screen, (225, 145, 25),
+        screen,
+        (225, 145, 25),
         (x - 22, y - 3 + wing_offset, 31, 19)
     )
 
     pygame.draw.ellipse(
-        screen, (255, 205, 55),
+        screen,
+        (255, 205, 55),
         (x - 17, y + wing_offset, 23, 11)
     )
 
     # Main body
     pygame.draw.ellipse(
-        screen, (255, 220, 60),
+        screen,
+        (255, 220, 60),
         (x - 29, y - 22, 58, 44)
     )
 
     # Belly
     pygame.draw.ellipse(
-        screen, (255, 240, 170),
+        screen,
+        (255, 240, 170),
         (x - 10, y + 2, 25, 17)
     )
 
@@ -119,23 +197,38 @@ def draw_bird():
         (x + 22, y + 8)
     ]
 
-    pygame.draw.polygon(screen, (245, 125, 25), beak_points)
-    pygame.draw.polygon(screen, (190, 80, 15), beak_points, 2)
+    pygame.draw.polygon(
+        screen,
+        (245, 125, 25),
+        beak_points
+    )
+
+    pygame.draw.polygon(
+        screen,
+        (190, 80, 15),
+        beak_points,
+        2
+    )
 
     # Eye
     pygame.draw.circle(
-        screen, (255, 255, 255),
-        (x + 12, y - 10), 7
+        screen,
+        WHITE,
+        (x + 12, y - 10),
+        7
     )
 
     pygame.draw.circle(
-        screen, (25, 25, 25),
-        (x + 15, y - 10), 3
+        screen,
+        (25, 25, 25),
+        (x + 15, y - 10),
+        3
     )
 
     # Tail feathers
     pygame.draw.polygon(
-        screen, (235, 165, 35),
+        screen,
+        (235, 165, 35),
         [
             (x - 26, y - 5),
             (x - 38, y - 13),
@@ -144,7 +237,8 @@ def draw_bird():
     )
 
     pygame.draw.polygon(
-        screen, (235, 165, 35),
+        screen,
+        (235, 165, 35),
         [
             (x - 25, y + 3),
             (x - 37, y + 12),
@@ -153,33 +247,58 @@ def draw_bird():
     )
 
 
+# -----------------------------
+# DRAW PIPES
+# -----------------------------
+
 def draw_pipes():
+
     for bottom_pipe, top_pipe, scored in pipes:
 
         pygame.draw.rect(
-            screen, (35, 180, 65), bottom_pipe
+            screen,
+            (35, 180, 65),
+            bottom_pipe
         )
 
         pygame.draw.rect(
-            screen, (35, 180, 65), top_pipe
+            screen,
+            (35, 180, 65),
+            top_pipe
         )
 
         # Pipe rims
         pygame.draw.rect(
-            screen, (20, 130, 45),
-            (bottom_pipe.x - 7, bottom_pipe.y,
-             pipe_width + 14, 22)
+            screen,
+            (20, 130, 45),
+            (
+                bottom_pipe.x - 7,
+                bottom_pipe.y,
+                pipe_width + 14,
+                22
+            )
         )
 
         pygame.draw.rect(
-            screen, (20, 130, 45),
-            (top_pipe.x - 7, top_pipe.bottom - 22,
-             pipe_width + 14, 22)
+            screen,
+            (20, 130, 45),
+            (
+                top_pipe.x - 7,
+                top_pipe.bottom - 22,
+                pipe_width + 14,
+                22
+            )
         )
 
 
+# -----------------------------
+# UPDATE PIPES
+# -----------------------------
+
 def update_pipes():
+
     for bottom_pipe, top_pipe, scored in pipes:
+
         bottom_pipe.x -= pipe_velocity
         top_pipe.x -= pipe_velocity
 
@@ -189,7 +308,12 @@ def update_pipes():
     ]
 
 
+# -----------------------------
+# UPDATE SCORE
+# -----------------------------
+
 def update_score():
+
     global score, high_score
 
     for i, (bottom_pipe, top_pipe, scored) in enumerate(pipes):
@@ -205,24 +329,36 @@ def update_score():
             )
 
             if score > high_score:
+
                 high_score = score
                 save_high_score(high_score)
 
 
+# -----------------------------
+# DRAW SCORE
+# -----------------------------
+
 def draw_score():
+
     score_text = font.render(
-        f"Score: {score}", True, (255, 255, 255)
+        f"Score: {score}",
+        True,
+        WHITE
     )
 
     high_text = small_font.render(
         f"High Score: {high_score}",
         True,
-        (255, 255, 255)
+        WHITE
     )
 
     screen.blit(score_text, (20, 20))
     screen.blit(high_text, (20, 85))
 
+
+# -----------------------------
+# CHECK COLLISION
+# -----------------------------
 
 def check_collision():
 
@@ -252,6 +388,10 @@ def check_collision():
     return False
 
 
+# -----------------------------
+# DRAW GAME OVER
+# -----------------------------
+
 def draw_game_over():
 
     overlay = pygame.Surface(
@@ -263,11 +403,15 @@ def draw_game_over():
     screen.blit(overlay, (0, 0))
 
     title = font.render(
-        "GAME OVER", True, (255, 255, 255)
+        "GAME OVER",
+        True,
+        WHITE
     )
 
     final_score = small_font.render(
-        f"Score: {score}", True, (255, 255, 255)
+        f"Score: {score}",
+        True,
+        WHITE
     )
 
     best_score = small_font.render(
@@ -279,78 +423,117 @@ def draw_game_over():
     restart = small_font.render(
         "Press SPACE to play again",
         True,
-        (255, 255, 255)
+        WHITE
     )
 
     quit_text = small_font.render(
         "Press ESC to quit",
         True,
-        (255, 255, 255)
+        WHITE
     )
 
     screen.blit(
         title,
         title.get_rect(
-            center=(screen_width // 2, 390)
+            center=(screen_width // 2, 350)
         )
     )
 
     screen.blit(
         final_score,
         final_score.get_rect(
-            center=(screen_width // 2, 465)
+            center=(screen_width // 2, 420)
         )
     )
 
     screen.blit(
         best_score,
         best_score.get_rect(
-            center=(screen_width // 2, 515)
+            center=(screen_width // 2, 470)
         )
     )
+
+    # Leaderboard upload status
+    if submission:
+
+        status_message = submission.status
+
+        status_color = (
+            GREEN
+            if status_message == "Score uploaded!"
+            else GRAY
+        )
+
+        status_text = small_font.render(
+            status_message,
+            True,
+            status_color
+        )
+
+        screen.blit(
+            status_text,
+            status_text.get_rect(
+                center=(screen_width // 2, 535)
+            )
+        )
 
     screen.blit(
         restart,
         restart.get_rect(
-            center=(screen_width // 2, 600)
+            center=(screen_width // 2, 610)
         )
     )
 
     screen.blit(
         quit_text,
         quit_text.get_rect(
-            center=(screen_width // 2, 650)
+            center=(screen_width // 2, 660)
         )
     )
 
 
-# Main game loop
+# -----------------------------
+# MAIN GAME LOOP
+# -----------------------------
+
 running = True
 
 while running:
 
     clock.tick(60)
 
+    # -----------------------------
+    # EVENTS
+    # -----------------------------
+
     for event in pygame.event.get():
 
         if event.type == pygame.QUIT:
+
             running = False
 
-        elif event.type == pygame. YDOWN:
+        elif event.type == pygame.KEYDOWN:
 
-            if game_over:
+            if event.key == pygame.K_ESCAPE:
 
-                if event.key == pygame.K_SPACE:
-                    reset_game()
-
-                elif event.key == pygame.K_ESCAPE:
-                    running = False
+                running = False
 
             elif event.key == pygame.K_SPACE:
-                bird_velocity = flap_strength
 
-            elif event.key == pygame.K_ESCAPE:
-                running = False
+                if game_over:
+
+                    reset_game()
+
+                else:
+
+                    bird_velocity = flap_strength
+
+    if not running:
+        break
+
+    # -----------------------------
+    # GAME UPDATE
+    # -----------------------------
 
     if not game_over:
 
@@ -363,6 +546,7 @@ while running:
             len(pipes) == 0
             or pipes[-1][0].x < screen_width - 420
         ):
+
             pipes.append(create_pipe())
 
         update_pipes()
@@ -374,26 +558,50 @@ while running:
             game_over = True
 
             if score > high_score:
+
                 high_score = score
                 save_high_score(high_score)
 
-    # Draw background
+    # -----------------------------
+    # R4: SUBMIT FINAL SCORE
+    # -----------------------------
+
+    if game_over and not score_submitted:
+
+        submission = submit_final_score(
+            GAME_ID,
+            PLAYER_NAME,
+            score
+        )
+
+        score_submitted = True
+
+    # -----------------------------
+    # DRAW BACKGROUND
+    # -----------------------------
+
     screen.fill((100, 100, 140))
 
     # Clouds
     pygame.draw.circle(
-        screen, (145, 145, 165),
-        (250, 160), 35
+        screen,
+        (145, 145, 165),
+        (250, 160),
+        35
     )
 
     pygame.draw.circle(
-        screen, (145, 145, 165),
-        (290, 150), 45
+        screen,
+        (145, 145, 165),
+        (290, 150),
+        45
     )
 
     pygame.draw.circle(
-        screen, (145, 145, 165),
-        (330, 165), 32
+        screen,
+        (145, 145, 165),
+        (330, 165),
+        32
     )
 
     # Draw game objects
@@ -402,9 +610,15 @@ while running:
     draw_score()
 
     if game_over:
+
         draw_game_over()
 
     pygame.display.flip()
 
 
+# -----------------------------
+# CLOSE PYGAME
+# -----------------------------
+
 pygame.quit()
+sys.exit()
