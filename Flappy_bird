@@ -12,7 +12,7 @@ from leaderboard import submit_final_score
 # -----------------------------
 
 PLAYER_NAME = os.environ.get("PLAYER_NAME", "Player1")
-GAME_ID = os.environ.get("GAME_ID", "flappy_bird")
+GAME_ID = os.environ.get("GAME_ID", "FlappyBird")
 
 score_submitted = False
 submission = None
