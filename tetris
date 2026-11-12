@@ -3,8 +3,12 @@ import pygame
 import random
 import json
 import os
+from leaderboard import submit_final_score
 
 pygame.init()
+
+PLAYER_NAME = os.environ.get("PLAYER_NAME", "Player1")
+GAME_ID = os.environ.get("GAME_ID", "tetris")
 
 # -----------------------------
 # GAME SETTINGS
@@ -502,7 +506,10 @@ def draw_sidebar(score, lines, level, next_piece):
 def main():
 
     global high_score
-
+   
+    score_submitted = False
+    submission = None
+  
     board = create_board()
 
     current_piece = Piece()
@@ -550,6 +557,9 @@ def main():
                     lines = 0
                     level = 1
 
+                    score_submitted = False
+                    submission = None
+                    
                     fall_time = 0
                     game_over = False
                     paused = False
@@ -669,6 +679,16 @@ def main():
                 fall_time = 0
 
         # -------------------------
+        # Submit final score once when the game ends
+        if game_over and not score_submitted:
+
+            submission = submit_final_score(
+                GAME_ID,
+                PLAYER_NAME,
+                score
+            )
+
+            score_submitted = True
         # DRAW EVERYTHING
         # -------------------------
         draw_board(board)
@@ -744,7 +764,14 @@ def main():
                 42,
                 SCREEN_HEIGHT // 2 + 45
             )
-
+            if submission:
+                draw_text(
+                    submission.status,
+                    12,
+                    GREEN if submission.status == "Score uploaded!" else GRAY,
+                    20,
+                    SCREEN_HEIGHT // 2 + 80
+                )
         pygame.display.update()
 
     pygame.quit()
