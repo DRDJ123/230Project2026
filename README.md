@@ -50,9 +50,7 @@ You will also need both Raspberry Pis connected to the same local network.
 
 ### Configure Pi #2's network address
 
-The game computers send scores to this address:
-
-`10.83.3.204`
+The game computers send scores to the local address
 
 Pi #2 must use this address so Pi #1 can find the leaderboard server.
 
@@ -61,11 +59,11 @@ The recommended method is to create a DHCP reservation in the router:
 1. Open the router's administration page on a computer connected to the network.
 2. Find the DHCP reservation or address reservation settings.
 3. Find Pi #2 in the connected-device list.
-4. Reserve the address `10.83.3.204` for Pi #2.
+4. Reserve the local address for Pi #2.
 5. Save the router settings.
 6. Restart Pi #2's network connection or reboot Pi #2.
 
-Make sure the router's network uses the `10.83.3.x` address range and that `10.83.3.204` is available. Do not assign this address to another device.
+Make sure the router's network uses your address range and that the local address is available. Do not assign this address to another device.
 
 On Pi #2, open a terminal and check its address:
 
@@ -76,7 +74,7 @@ hostname -I
 The output should include:
 
 ```text
-10.83.3.204
+'your local address'
 ```
 
 Pi #1 can use automatic DHCP addressing. It must be connected to the same network.
@@ -103,6 +101,8 @@ This creates a folder named `230Project2026`.
 ---
 
 ## 5. Set Up Pi #2 – Leaderboard Server
+
+IN "leaderboard" CODE EDIT LINE 11 
 
 Pi #2 receives scores from the games and stores them in a SQLite database.
 
@@ -137,7 +137,7 @@ Keep this terminal open while the arcade is being used. Closing the terminal sto
 
 On a computer connected to the same network, open a web browser and visit:
 
-http://10.83.3.204:5000
+pi 2s leaderboard webpage address
 
 The page displays the top 10 scores for each game.
 
@@ -198,13 +198,13 @@ When a player finishes a game, the game sends the player's name, game name, and 
 
 The server receives the score through:
 
-`http://10.83.3.204:5000/score`
+`http://(insert loacl ip):5000/score`
 
 The server saves the score in its SQLite database.
 
 The leaderboard webpage is available at:
 
-`http://10.83.3.204:5000`
+`http://(insert loacl ip):5000`
 
 It displays the top 10 scores for:
 
@@ -232,7 +232,7 @@ On Pi #2, check its IP address:
 hostname -I
 ```
 
-Confirm that it includes `10.83.3.204`.
+Confirm that it includes `(your address)`.
 
 Make sure the server is running:
 
@@ -246,7 +246,7 @@ python3 app.py
 On Pi #1, check that Pi #2 can be reached:
 
 ```bash
-ping -c 4 10.83.3.204
+ping -c 4 (your address)
 ```
 
 If the connection works, Pi #1 should receive replies.
@@ -262,7 +262,7 @@ If it does not work:
 
 On a computer connected to the same network, visit:
 
-http://10.83.3.204:5000
+`http://(insert loacl ip):5000/score`
 
 If the webpage loads, the leaderboard server is reachable.
 
