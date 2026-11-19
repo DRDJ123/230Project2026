@@ -8,7 +8,7 @@ import urllib.error
 # Pi #2 leaderboard server
 SERVER_URL = os.environ.get(
     "LEADERBOARD_URL",
-    "http://10.83.3.204:5000/score"
+    "http://xx.xx.x.xxx:5000/score" #REPLACE xx.xx.x.xxx WITH PI2 IP ADDRESS!!!!!!!!!!
 )
 
 
